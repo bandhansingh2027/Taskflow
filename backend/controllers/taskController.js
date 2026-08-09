@@ -1,8 +1,10 @@
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Team = require('../models/Team');
 
 // Helper to find user's active team ID
 const getUserTeamId = async (userId) => {
+  if (!userId) return null;
   const team = await Team.findOne({
     $or: [{ creatorId: userId }, { members: userId }]
   });
@@ -29,7 +31,6 @@ const getTasks = async (req, res) => {
 
     // Status filter
     if (status && status !== 'All') {
-      // Handle legacy 'Pending' mapping to 'To Do'
       if (status === 'Pending' || status === 'To Do') {
         query.status = { $in: ['To Do', 'Pending'] };
       } else {
@@ -62,7 +63,6 @@ const getTasks = async (req, res) => {
       .populate('userId', 'name email')
       .sort({ createdAt: -1 });
 
-    // Normalize legacy 'Pending' status in response if any exists
     const normalizedTasks = tasks.map((t) => {
       const taskObj = t.toObject();
       if (taskObj.status === 'Pending') taskObj.status = 'To Do';
@@ -103,10 +103,16 @@ const createTask = async (req, res) => {
     // Map 'Pending' to 'To Do'
     const finalStatus = (status === 'Pending' || !status) ? 'To Do' : status;
 
+    // Validate assignedTo ObjectId or fallback to current user
+    let targetAssignedTo = req.user._id;
+    if (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo)) {
+      targetAssignedTo = assignedTo;
+    }
+
     const task = await Task.create({
       userId: req.user._id,
       teamId: teamId || null,
-      assignedTo: assignedTo || req.user._id,
+      assignedTo: targetAssignedTo,
       title: title.trim(),
       description: description ? description.trim() : '',
       status: finalStatus,
@@ -120,7 +126,7 @@ const createTask = async (req, res) => {
     res.status(201).json(populatedTask);
   } catch (error) {
     console.error('Create task error:', error.message);
-    res.status(500).json({ message: 'Failed to create task', error: error.message });
+    res.status(500).json({ message: error.message || 'Failed to create task', error: error.message });
   }
 };
 
@@ -155,7 +161,9 @@ const updateTask = async (req, res) => {
     if (description !== undefined) task.description = description.trim();
     if (status) task.status = status === 'Pending' ? 'To Do' : status;
     if (priority) task.priority = priority;
-    if (assignedTo) task.assignedTo = assignedTo;
+    if (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo)) {
+      task.assignedTo = assignedTo;
+    }
 
     await task.save();
 
@@ -166,7 +174,7 @@ const updateTask = async (req, res) => {
     res.status(200).json(updatedTask);
   } catch (error) {
     console.error('Update task error:', error.message);
-    res.status(500).json({ message: 'Failed to update task', error: error.message });
+    res.status(500).json({ message: error.message || 'Failed to update task', error: error.message });
   }
 };
 

@@ -25,7 +25,7 @@ const MyTeam = () => {
       setTeam(response.data);
     } catch (err) {
       console.error('Error fetching team:', err);
-      setError('Failed to load team data.');
+      setError(err.response?.data?.message || 'Failed to load team data.');
     } finally {
       setLoading(false);
     }

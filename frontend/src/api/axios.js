@@ -18,4 +18,22 @@ API.interceptors.request.use(
   }
 );
 
+// Interceptor to handle 401 Unauthorized globally (clears stale token & user session)
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('taskflow_token');
+      localStorage.removeItem('taskflow_user');
+      if (
+        window.location.pathname !== '/login' &&
+        window.location.pathname !== '/register'
+      ) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API;
