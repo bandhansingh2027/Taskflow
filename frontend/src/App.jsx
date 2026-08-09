@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import MyTeam from './pages/MyTeam';
 import Tasks from './pages/Tasks';
 import AddTask from './pages/AddTask';
 import EditTask from './pages/EditTask';
@@ -42,6 +43,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/team"
+            element={
+              <ProtectedRoute>
+                <MyTeam />
               </ProtectedRoute>
             }
           />

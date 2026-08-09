@@ -1,30 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import API from '../api/axios';
-import { Save, ArrowLeft, AlertCircle, FileText, Tag, Flag } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import { Save, ArrowLeft, AlertCircle, FileText, Tag, Flag, User } from 'lucide-react';
 
 const EditTask = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('Pending');
+  const [status, setStatus] = useState('To Do');
   const [priority, setPriority] = useState('Medium');
+  const [assignedTo, setAssignedTo] = useState('');
 
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchTask = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError('');
 
-        const response = await API.get('/tasks');
-        const foundTask = response.data.find((t) => t._id === id);
+        const [tasksRes, teamRes] = await Promise.all([
+          API.get('/tasks'),
+          API.get('/teams')
+        ]);
 
+        const foundTask = tasksRes.data.find((t) => t._id === id);
         if (!foundTask) {
           setError('Task not found');
           return;
@@ -32,8 +39,15 @@ const EditTask = () => {
 
         setTitle(foundTask.title);
         setDescription(foundTask.description || '');
-        setStatus(foundTask.status || 'Pending');
+        setStatus(foundTask.status === 'Pending' ? 'To Do' : (foundTask.status || 'To Do'));
         setPriority(foundTask.priority || 'Medium');
+        setAssignedTo(foundTask.assignedTo?._id || foundTask.assignedTo || '');
+
+        if (teamRes.data && teamRes.data.members) {
+          setMembers(teamRes.data.members);
+        } else if (user) {
+          setMembers([{ _id: user._id, name: user.name, email: user.email }]);
+        }
       } catch (err) {
         console.error('Error fetching task details:', err);
         setError('Failed to fetch task details.');
@@ -42,8 +56,8 @@ const EditTask = () => {
       }
     };
 
-    fetchTask();
-  }, [id]);
+    fetchData();
+  }, [id, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,7 +75,8 @@ const EditTask = () => {
         title: title.trim(),
         description: description.trim(),
         status,
-        priority
+        priority,
+        assignedTo
       });
 
       navigate('/tasks');
@@ -89,8 +104,8 @@ const EditTask = () => {
           <ArrowLeft size={18} />
           <span>Back to Tasks</span>
         </Link>
-        <h1>Edit Task</h1>
-        <p>Update task details, status, or priority level.</p>
+        <h1>Edit Team Task</h1>
+        <p>Update task details, assigned member, status, or priority level.</p>
       </div>
 
       {error && (
@@ -110,7 +125,7 @@ const EditTask = () => {
               <input
                 type="text"
                 id="title"
-                placeholder="e.g. Complete Project Proposal"
+                placeholder="e.g. Implement User Authentication"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -124,10 +139,33 @@ const EditTask = () => {
             <textarea
               id="description"
               rows={4}
-              placeholder="Add details, notes, or subtasks..."
+              placeholder="Add details, instructions, or subtasks..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+          </div>
+
+          {/* Assigned To */}
+          <div className="form-group">
+            <label htmlFor="assignedTo">Assign To Team Member</label>
+            <div className="input-with-icon">
+              <User size={18} className="input-icon" />
+              <select
+                id="assignedTo"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+              >
+                {members.length > 0 ? (
+                  members.map((member) => (
+                    <option key={member._id} value={member._id}>
+                      {member.name} ({member.email})
+                    </option>
+                  ))
+                ) : (
+                  <option value={user?._id}>{user?.name} (Me)</option>
+                )}
+              </select>
+            </div>
           </div>
 
           {/* Status & Priority Row */}
@@ -141,7 +179,7 @@ const EditTask = () => {
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                 >
-                  <option value="Pending">Pending</option>
+                  <option value="To Do">To Do</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
                 </select>

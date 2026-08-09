@@ -1,24 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../api/axios';
-import { PlusCircle, ArrowLeft, AlertCircle, FileText, Tag, Flag } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import { PlusCircle, ArrowLeft, AlertCircle, FileText, Tag, Flag, User } from 'lucide-react';
 
 const AddTask = () => {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('Pending');
+  const [status, setStatus] = useState('To Do');
   const [priority, setPriority] = useState('Medium');
+  const [assignedTo, setAssignedTo] = useState('');
 
+  const [members, setMembers] = useState([]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const res = await API.get('/teams');
+        if (res.data && res.data.members) {
+          setMembers(res.data.members);
+          // Default assignedTo to current user if present in members
+          setAssignedTo(user?._id || res.data.members[0]?._id || '');
+        } else if (user) {
+          setMembers([{ _id: user._id, name: user.name, email: user.email }]);
+          setAssignedTo(user._id);
+        }
+      } catch (err) {
+        console.error('Error fetching team members:', err);
+        if (user) {
+          setMembers([{ _id: user._id, name: user.name, email: user.email }]);
+          setAssignedTo(user._id);
+        }
+      }
+    };
+
+    fetchTeamMembers();
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (!title.trim()) {
       setError('Task title is required.');
       return;
@@ -31,7 +58,8 @@ const AddTask = () => {
         title: title.trim(),
         description: description.trim(),
         status,
-        priority
+        priority,
+        assignedTo: assignedTo || user?._id
       });
 
       navigate('/tasks');
@@ -50,8 +78,8 @@ const AddTask = () => {
           <ArrowLeft size={18} />
           <span>Back to Tasks</span>
         </Link>
-        <h1>Create New Task</h1>
-        <p>Add a new task to your personal workspace.</p>
+        <h1>Create Team Task</h1>
+        <p>Add a new task and assign it to a team member.</p>
       </div>
 
       {error && (
@@ -71,7 +99,7 @@ const AddTask = () => {
               <input
                 type="text"
                 id="title"
-                placeholder="e.g. Complete Project Proposal"
+                placeholder="e.g. Implement User Authentication"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -85,10 +113,33 @@ const AddTask = () => {
             <textarea
               id="description"
               rows={4}
-              placeholder="Add details, notes, or subtasks..."
+              placeholder="Add details, instructions, or subtasks..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+          </div>
+
+          {/* Assigned To */}
+          <div className="form-group">
+            <label htmlFor="assignedTo">Assign To Team Member</label>
+            <div className="input-with-icon">
+              <User size={18} className="input-icon" />
+              <select
+                id="assignedTo"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+              >
+                {members.length > 0 ? (
+                  members.map((member) => (
+                    <option key={member._id} value={member._id}>
+                      {member.name} ({member.email})
+                    </option>
+                  ))
+                ) : (
+                  <option value={user?._id}>{user?.name} (Me)</option>
+                )}
+              </select>
+            </div>
           </div>
 
           {/* Status & Priority Row */}
@@ -102,7 +153,7 @@ const AddTask = () => {
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                 >
-                  <option value="Pending">Pending</option>
+                  <option value="To Do">To Do</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
                 </select>

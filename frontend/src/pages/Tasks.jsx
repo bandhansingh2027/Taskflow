@@ -42,7 +42,6 @@ const Tasks = () => {
   };
 
   useEffect(() => {
-    // Debounce search/filter calls slightly
     const timer = setTimeout(() => {
       fetchTasks();
     }, 300);
@@ -85,8 +84,8 @@ const Tasks = () => {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1>My Tasks</h1>
-          <p>Search, filter, and manage all your tasks in one place.</p>
+          <h1>Team Tasks</h1>
+          <p>Search, filter, and assign team tasks effectively.</p>
         </div>
         <Link to="/add-task" className="btn btn-primary">
           <PlusCircle size={18} />
@@ -124,7 +123,7 @@ const Tasks = () => {
               className="filter-select"
             >
               <option value="All">All Statuses</option>
-              <option value="Pending">Pending</option>
+              <option value="To Do">To Do</option>
               <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
             </select>
@@ -160,7 +159,7 @@ const Tasks = () => {
       {loading ? (
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>Fetching tasks...</p>
+          <p>Fetching team tasks...</p>
         </div>
       ) : tasks.length === 0 ? (
         <div className="empty-state">
@@ -171,7 +170,7 @@ const Tasks = () => {
           <p>
             {searchTerm || statusFilter !== 'All' || priorityFilter !== 'All'
               ? 'No tasks match your current filters. Try resetting your search.'
-              : 'You have no tasks saved. Add a new task to get started!'}
+              : 'Your team has no active tasks. Add a new task to get started!'}
           </p>
           {searchTerm || statusFilter !== 'All' || priorityFilter !== 'All' ? (
             <button onClick={handleResetFilters} className="btn btn-secondary">

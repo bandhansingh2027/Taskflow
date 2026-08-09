@@ -7,6 +7,14 @@ const taskSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    teamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team'
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
     title: {
       type: String,
       required: [true, 'Task title is required'],
@@ -20,10 +28,10 @@ const taskSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ['Pending', 'In Progress', 'Completed'],
+        values: ['To Do', 'In Progress', 'Completed'],
         message: '{VALUE} is not a valid status'
       },
-      default: 'Pending'
+      default: 'To Do'
     },
     priority: {
       type: String,

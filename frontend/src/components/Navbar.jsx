@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { CheckSquare, LayoutDashboard, ListTodo, PlusCircle, LogOut, User } from 'lucide-react';
+import { CheckSquare, LayoutDashboard, Users, ListTodo, PlusCircle, LogOut, User } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -36,6 +36,13 @@ const Navbar = () => {
               >
                 <LayoutDashboard size={18} />
                 <span>Dashboard</span>
+              </Link>
+              <Link
+                to="/team"
+                className={`nav-link ${isActive('/team') ? 'active' : ''}`}
+              >
+                <Users size={18} />
+                <span>My Team</span>
               </Link>
               <Link
                 to="/tasks"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Trash2, Calendar, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Edit2, Trash2, Calendar, Clock, CheckCircle2, AlertCircle, User } from 'lucide-react';
 
 const TaskCard = ({ task, onDelete, onStatusChange }) => {
   const navigate = useNavigate();
@@ -11,9 +11,10 @@ const TaskCard = ({ task, onDelete, onStatusChange }) => {
         return <span className="badge badge-completed"><CheckCircle2 size={13} /> Completed</span>;
       case 'In Progress':
         return <span className="badge badge-in-progress"><Clock size={13} /> In Progress</span>;
+      case 'To Do':
       case 'Pending':
       default:
-        return <span className="badge badge-pending"><AlertCircle size={13} /> Pending</span>;
+        return <span className="badge badge-pending"><AlertCircle size={13} /> To Do</span>;
     }
   };
 
@@ -40,7 +41,7 @@ const TaskCard = ({ task, onDelete, onStatusChange }) => {
   };
 
   return (
-    <div className={`task-card status-border-${task.status.toLowerCase().replace(' ', '-')}`}>
+    <div className={`task-card status-border-${(task.status || 'todo').toLowerCase().replace(' ', '-')}`}>
       <div className="task-card-header">
         <div className="task-badges">
           {getStatusBadge(task.status)}
@@ -69,6 +70,15 @@ const TaskCard = ({ task, onDelete, onStatusChange }) => {
         <p className="task-description">{task.description}</p>
       )}
 
+      {/* Assigned To Pill */}
+      <div className="task-assignee-row">
+        <User size={14} className="input-icon-static" />
+        <span className="assignee-label">Assigned to:</span>
+        <span className="assignee-name">
+          {task.assignedTo?.name || 'Unassigned'}
+        </span>
+      </div>
+
       <div className="task-card-footer">
         <div className="task-date">
           <Calendar size={14} />
@@ -77,11 +87,11 @@ const TaskCard = ({ task, onDelete, onStatusChange }) => {
 
         <div className="status-selector">
           <select
-            value={task.status}
+            value={task.status === 'Pending' ? 'To Do' : task.status}
             onChange={(e) => onStatusChange(task._id, e.target.value)}
             className="status-select"
           >
-            <option value="Pending">Pending</option>
+            <option value="To Do">To Do</option>
             <option value="In Progress">In Progress</option>
             <option value="Completed">Completed</option>
           </select>

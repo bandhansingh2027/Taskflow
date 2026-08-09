@@ -1,18 +1,40 @@
 const Task = require('../models/Task');
+const Team = require('../models/Team');
 
-// @desc    Get all tasks for logged in user (with search and status filter)
+// Helper to find user's active team ID
+const getUserTeamId = async (userId) => {
+  const team = await Team.findOne({
+    $or: [{ creatorId: userId }, { members: userId }]
+  });
+  return team ? team._id : null;
+};
+
+// @desc    Get all tasks for user's team or user (with search, status, priority filters)
 // @route   GET /api/tasks
 // @access  Private
 const getTasks = async (req, res) => {
   try {
     const { status, priority, search } = req.query;
+    const teamId = await getUserTeamId(req.user._id);
 
-    // Filter by user ID (Strict user scoping)
-    const query = { userId: req.user._id };
+    let query = {};
+    if (teamId) {
+      query.teamId = teamId;
+    } else {
+      query.$or = [
+        { userId: req.user._id },
+        { assignedTo: req.user._id }
+      ];
+    }
 
     // Status filter
     if (status && status !== 'All') {
-      query.status = status;
+      // Handle legacy 'Pending' mapping to 'To Do'
+      if (status === 'Pending' || status === 'To Do') {
+        query.status = { $in: ['To Do', 'Pending'] };
+      } else {
+        query.status = status;
+      }
     }
 
     // Priority filter
@@ -22,35 +44,53 @@ const getTasks = async (req, res) => {
 
     // Search filter (searches title and description)
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
+      const searchRegex = { $regex: search, $options: 'i' };
+      if (query.$or) {
+        query = {
+          $and: [
+            query,
+            { $or: [{ title: searchRegex }, { description: searchRegex }] }
+          ]
+        };
+      } else {
+        query.$or = [{ title: searchRegex }, { description: searchRegex }];
+      }
     }
 
-    const tasks = await Task.find(query).sort({ createdAt: -1 });
-    res.status(200).json(tasks);
+    const tasks = await Task.find(query)
+      .populate('assignedTo', 'name email')
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 });
+
+    // Normalize legacy 'Pending' status in response if any exists
+    const normalizedTasks = tasks.map((t) => {
+      const taskObj = t.toObject();
+      if (taskObj.status === 'Pending') taskObj.status = 'To Do';
+      return taskObj;
+    });
+
+    res.status(200).json(normalizedTasks);
   } catch (error) {
     console.error('Get tasks error:', error.message);
     res.status(500).json({ message: 'Failed to retrieve tasks', error: error.message });
   }
 };
 
-// @desc    Create a new task
+// @desc    Create a new team task
 // @route   POST /api/tasks
 // @access  Private
 const createTask = async (req, res) => {
   try {
-    const { title, description, status, priority } = req.body;
+    const { title, description, status, priority, assignedTo } = req.body;
 
     // Validation
     if (!title || title.trim() === '') {
       return res.status(400).json({ message: 'Task title is required' });
     }
 
-    const validStatuses = ['Pending', 'In Progress', 'Completed'];
+    const validStatuses = ['To Do', 'In Progress', 'Completed', 'Pending'];
     if (status && !validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid task status. Must be Pending, In Progress, or Completed' });
+      return res.status(400).json({ message: 'Invalid task status. Must be To Do, In Progress, or Completed' });
     }
 
     const validPriorities = ['Low', 'Medium', 'High'];
@@ -58,15 +98,26 @@ const createTask = async (req, res) => {
       return res.status(400).json({ message: 'Invalid task priority. Must be Low, Medium, or High' });
     }
 
+    const teamId = await getUserTeamId(req.user._id);
+
+    // Map 'Pending' to 'To Do'
+    const finalStatus = (status === 'Pending' || !status) ? 'To Do' : status;
+
     const task = await Task.create({
       userId: req.user._id,
+      teamId: teamId || null,
+      assignedTo: assignedTo || req.user._id,
       title: title.trim(),
       description: description ? description.trim() : '',
-      status: status || 'Pending',
+      status: finalStatus,
       priority: priority || 'Medium'
     });
 
-    res.status(201).json(task);
+    const populatedTask = await Task.findById(task._id)
+      .populate('assignedTo', 'name email')
+      .populate('userId', 'name email');
+
+    res.status(201).json(populatedTask);
   } catch (error) {
     console.error('Create task error:', error.message);
     res.status(500).json({ message: 'Failed to create task', error: error.message });
@@ -84,18 +135,13 @@ const updateTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    // Security check: ensure task belongs to logged-in user
-    if (task.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to update this task' });
-    }
-
-    const { title, description, status, priority } = req.body;
+    const { title, description, status, priority, assignedTo } = req.body;
 
     if (title !== undefined && title.trim() === '') {
       return res.status(400).json({ message: 'Task title cannot be empty' });
     }
 
-    const validStatuses = ['Pending', 'In Progress', 'Completed'];
+    const validStatuses = ['To Do', 'In Progress', 'Completed', 'Pending'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid task status' });
     }
@@ -105,12 +151,18 @@ const updateTask = async (req, res) => {
       return res.status(400).json({ message: 'Invalid task priority' });
     }
 
-    task.title = title !== undefined ? title.trim() : task.title;
-    task.description = description !== undefined ? description.trim() : task.description;
-    task.status = status || task.status;
-    task.priority = priority || task.priority;
+    if (title !== undefined) task.title = title.trim();
+    if (description !== undefined) task.description = description.trim();
+    if (status) task.status = status === 'Pending' ? 'To Do' : status;
+    if (priority) task.priority = priority;
+    if (assignedTo) task.assignedTo = assignedTo;
 
-    const updatedTask = await task.save();
+    await task.save();
+
+    const updatedTask = await Task.findById(task._id)
+      .populate('assignedTo', 'name email')
+      .populate('userId', 'name email');
+
     res.status(200).json(updatedTask);
   } catch (error) {
     console.error('Update task error:', error.message);
@@ -129,11 +181,6 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    // Security check: ensure task belongs to logged-in user
-    if (task.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to delete this task' });
-    }
-
     await Task.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: 'Task removed successfully', id: req.params.id });
   } catch (error) {
@@ -142,19 +189,34 @@ const deleteTask = async (req, res) => {
   }
 };
 
-// @desc    Get dashboard statistics for logged-in user
+// @desc    Get dashboard statistics & team info for logged-in user
 // @route   GET /api/tasks/stats
 // @access  Private
 const getTaskStats = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const team = await Team.findOne({
+      $or: [{ creatorId: req.user._id }, { members: req.user._id }]
+    }).populate('members', 'name email');
 
-    const totalTasks = await Task.countDocuments({ userId });
-    const completedTasks = await Task.countDocuments({ userId, status: 'Completed' });
-    const pendingTasks = await Task.countDocuments({ userId, status: 'Pending' });
-    const inProgressTasks = await Task.countDocuments({ userId, status: 'In Progress' });
+    let query = {};
+    if (team) {
+      query.teamId = team._id;
+    } else {
+      query.$or = [{ userId: req.user._id }, { assignedTo: req.user._id }];
+    }
+
+    const totalTasks = await Task.countDocuments(query);
+    const completedTasks = await Task.countDocuments({ ...query, status: 'Completed' });
+    const pendingTasks = await Task.countDocuments({
+      ...query,
+      status: { $in: ['To Do', 'Pending'] }
+    });
+    const inProgressTasks = await Task.countDocuments({ ...query, status: 'In Progress' });
 
     res.status(200).json({
+      teamName: team ? team.name : 'Personal Workspace',
+      teamDescription: team ? team.description : '',
+      memberCount: team ? team.members.length : 1,
       total: totalTasks,
       completed: completedTasks,
       pending: pendingTasks,
