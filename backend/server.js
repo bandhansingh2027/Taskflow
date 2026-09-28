@@ -26,6 +26,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/teams', require('./routes/teamRoutes'));
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 // Health check endpoint
 app.get('/', (req, res) => {

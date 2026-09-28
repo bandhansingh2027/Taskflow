@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const {
   getTasks,
+  getTaskById,
   createTask,
   updateTask,
+  updateTaskStatus,
   deleteTask,
   getTaskStats
 } = require('../controllers/taskController');
@@ -20,8 +22,12 @@ router.route('/')
   .get(getTasks)
   .post(createTask);
 
-// PUT /api/tasks/:id & DELETE /api/tasks/:id
+// PATCH /api/tasks/:id/status
+router.patch('/:id/status', updateTaskStatus);
+
+// GET /api/tasks/:id, PUT /api/tasks/:id & DELETE /api/tasks/:id
 router.route('/:id')
+  .get(getTaskById)
   .put(updateTask)
   .delete(deleteTask);
 

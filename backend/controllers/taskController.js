@@ -279,10 +279,61 @@ const getTaskStats = async (req, res) => {
   }
 };
 
+// @desc    Get single task by ID
+// @route   GET /api/tasks/:id
+// @access  Private
+const getTaskById = async (req, res) => {
+  try {
+    if (process.env.DEMO_MODE === 'true') {
+      const tasks = demoStore.getTasks(req.user._id, {});
+      const task = tasks.find((t) => String(t._id) === String(req.params.id));
+      if (!task) return res.status(404).json({ message: 'Task not found' });
+      return res.status(200).json(task);
+    }
+
+    const task = await Task.findById(req.params.id)
+      .populate('assignedTo', 'name email')
+      .populate('userId', 'name email');
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+    res.status(200).json(task);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to retrieve task', error: error.message });
+  }
+};
+
+// @desc    Update task status via PATCH
+// @route   PATCH /api/tasks/:id/status
+// @access  Private
+const updateTaskStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ message: 'Status is required' });
+
+    if (process.env.DEMO_MODE === 'true') {
+      const updated = demoStore.updateTask(req.params.id, { status });
+      return res.status(200).json(updated);
+    }
+
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+    task.status = status === 'Pending' ? 'To Do' : status;
+    await task.save();
+
+    const updatedTask = await Task.findById(task._id)
+      .populate('assignedTo', 'name email')
+      .populate('userId', 'name email');
+    res.status(200).json(updatedTask);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update task status', error: error.message });
+  }
+};
+
 module.exports = {
   getTasks,
+  getTaskById,
   createTask,
   updateTask,
+  updateTaskStatus,
   deleteTask,
   getTaskStats
 };
