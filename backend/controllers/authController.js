@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const demoStore = require('../services/demoStore');
 
 // Helper function to generate JWT token
 const generateToken = (id) => {
@@ -27,17 +28,30 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
-    // Check if user already exists
+    if (process.env.DEMO_MODE === 'true') {
+      const existingUser = demoStore.findUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists with this email' });
+      }
+
+      const newUser = await demoStore.createUser(name, email, password);
+      return res.status(201).json({
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        token: generateToken(newUser._id)
+      });
+    }
+
+    // MongoDB Mode
     const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Hash password with bcrypt
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
     const user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -56,7 +70,7 @@ const registerUser = async (req, res) => {
     }
   } catch (error) {
     console.error('Register error:', error.message);
-    res.status(500).json({ message: 'Server error during registration', error: error.message });
+    res.status(500).json({ message: error.message || 'Server error during registration', error: error.message });
   }
 };
 
@@ -72,13 +86,31 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Please provide both email and password' });
     }
 
-    // Check for user email
+    if (process.env.DEMO_MODE === 'true') {
+      const user = demoStore.findUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      return res.status(200).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token: generateToken(user._id)
+      });
+    }
+
+    // MongoDB Mode
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Match password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });

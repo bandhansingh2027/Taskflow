@@ -1,0 +1,98 @@
+[
+  {
+    "_id": "task_101",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_demo_1001",
+    "title": "Complete System Architecture Review",
+    "description": "Review full stack components, environment configs, and deployment scripts.",
+    "status": "In Progress",
+    "priority": "High",
+    "dueDate": "2026-09-30",
+    "createdAt": "2026-09-27T20:17:28.391Z"
+  },
+  {
+    "_id": "task_102",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_alice_1002",
+    "title": "Design UI Theme & Navigation Header",
+    "description": "Ensure dark purple glassmorphic aesthetics across navigation bar and dashboard cards.",
+    "status": "Completed",
+    "priority": "Medium",
+    "dueDate": "2026-09-29",
+    "createdAt": "2026-09-26T20:17:28.391Z"
+  },
+  {
+    "_id": "task_103",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_bob_1003",
+    "title": "Refactor Authentication & JWT Interceptors",
+    "description": "Handle automatic token attachment and clean 401 session expiration handling.",
+    "status": "To Do",
+    "priority": "High",
+    "dueDate": "2026-10-01",
+    "createdAt": "2026-09-28T08:17:28.391Z"
+  },
+  {
+    "_id": "task_104",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_charlie_1004",
+    "title": "Optimize Team Member Assignment Flow",
+    "description": "Allow adding registered team members by email and assigning active tasks.",
+    "status": "In Progress",
+    "priority": "Medium",
+    "dueDate": "2026-10-02",
+    "createdAt": "2026-09-28T14:17:28.391Z"
+  },
+  {
+    "_id": "task_105",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_demo_1001",
+    "title": "Set Up Local JSON Demo Data Store",
+    "description": "Ensure application operates seamlessly in offline presentation demo mode.",
+    "status": "Completed",
+    "priority": "Low",
+    "dueDate": "2026-10-03",
+    "createdAt": "2026-09-25T20:17:28.391Z"
+  },
+  {
+    "_id": "task_106",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_alice_1002",
+    "title": "Conduct Performance Audit on Dashboard Charts",
+    "description": "Verify statistic counter animations and task list rendering speed.",
+    "status": "To Do",
+    "priority": "Medium",
+    "dueDate": "2026-10-04",
+    "createdAt": "2026-09-28T16:17:28.391Z"
+  },
+  {
+    "_id": "task_107",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_bob_1003",
+    "title": "Prepare Final Live Demo Presentation",
+    "description": "Test register, login, add task, edit status, team view, and data persistence.",
+    "status": "To Do",
+    "priority": "High",
+    "dueDate": "2026-09-29",
+    "createdAt": "2026-09-28T18:17:28.391Z"
+  },
+  {
+    "_id": "task_108",
+    "userId": "usr_demo_1001",
+    "teamId": "team_alpha_2001",
+    "assignedTo": "usr_charlie_1004",
+    "title": "Update API Documentation & Endpoint List",
+    "description": "Ensure Swagger/Postman docs reflect exact JSON payload shapes.",
+    "status": "Completed",
+    "priority": "Low",
+    "dueDate": "2026-10-05",
+    "createdAt": "2026-09-24T20:17:28.391Z"
+  }
+]

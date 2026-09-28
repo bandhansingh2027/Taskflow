@@ -1,0 +1,15 @@
+[
+  {
+    "_id": "team_alpha_2001",
+    "name": "Engineering Product Team",
+    "description": "Core product dev & UI task workflow management",
+    "creatorId": "usr_demo_1001",
+    "members": [
+      "usr_demo_1001",
+      "usr_alice_1002",
+      "usr_bob_1003",
+      "usr_charlie_1004"
+    ],
+    "createdAt": "2026-09-28T20:17:28.389Z"
+  }
+]

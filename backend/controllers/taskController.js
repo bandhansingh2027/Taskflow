@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Team = require('../models/Team');
+const demoStore = require('../services/demoStore');
 
-// Helper to find user's active team ID
+// Helper to find user's active team ID in MongoDB mode
 const getUserTeamId = async (userId) => {
   if (!userId) return null;
   const team = await Team.findOne({
@@ -17,6 +18,13 @@ const getUserTeamId = async (userId) => {
 const getTasks = async (req, res) => {
   try {
     const { status, priority, search } = req.query;
+
+    if (process.env.DEMO_MODE === 'true') {
+      const tasks = demoStore.getTasks(req.user._id, { status, priority, search });
+      return res.status(200).json(tasks);
+    }
+
+    // MongoDB Mode
     const teamId = await getUserTeamId(req.user._id);
 
     let baseQuery = {};
@@ -33,7 +41,6 @@ const getTasks = async (req, res) => {
 
     const conditions = [baseQuery];
 
-    // Status filter
     if (status && status !== 'All') {
       if (status === 'Pending' || status === 'To Do') {
         conditions.push({ status: { $in: ['To Do', 'Pending'] } });
@@ -42,12 +49,10 @@ const getTasks = async (req, res) => {
       }
     }
 
-    // Priority filter
     if (priority && priority !== 'All') {
       conditions.push({ priority });
     }
 
-    // Search filter (searches title and description)
     if (search && search.trim()) {
       const searchRegex = { $regex: search.trim(), $options: 'i' };
       conditions.push({
@@ -82,7 +87,6 @@ const createTask = async (req, res) => {
   try {
     const { title, description, status, priority, assignedTo, dueDate } = req.body;
 
-    // Validation
     if (!title || title.trim() === '') {
       return res.status(400).json({ message: 'Task title is required' });
     }
@@ -97,12 +101,22 @@ const createTask = async (req, res) => {
       return res.status(400).json({ message: 'Invalid task priority. Must be Low, Medium, or High' });
     }
 
-    const teamId = await getUserTeamId(req.user._id);
+    if (process.env.DEMO_MODE === 'true') {
+      const createdTask = demoStore.createTask(req.user._id, {
+        title,
+        description,
+        status,
+        priority,
+        assignedTo,
+        dueDate
+      });
+      return res.status(201).json(createdTask);
+    }
 
-    // Map 'Pending' to 'To Do'
+    // MongoDB Mode
+    const teamId = await getUserTeamId(req.user._id);
     const finalStatus = (status === 'Pending' || !status) ? 'To Do' : status;
 
-    // Validate assignedTo ObjectId or fallback to current user
     let targetAssignedTo = req.user._id;
     if (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo)) {
       targetAssignedTo = assignedTo;
@@ -135,12 +149,6 @@ const createTask = async (req, res) => {
 // @access  Private
 const updateTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
     const { title, description, status, priority, assignedTo, dueDate } = req.body;
 
     if (title !== undefined && title.trim() === '') {
@@ -155,6 +163,24 @@ const updateTask = async (req, res) => {
     const validPriorities = ['Low', 'Medium', 'High'];
     if (priority && !validPriorities.includes(priority)) {
       return res.status(400).json({ message: 'Invalid task priority' });
+    }
+
+    if (process.env.DEMO_MODE === 'true') {
+      const updatedTask = demoStore.updateTask(req.params.id, {
+        title,
+        description,
+        status,
+        priority,
+        assignedTo,
+        dueDate
+      });
+      return res.status(200).json(updatedTask);
+    }
+
+    // MongoDB Mode
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
     }
 
     if (title !== undefined) task.title = title.trim();
@@ -186,8 +212,13 @@ const updateTask = async (req, res) => {
 // @access  Private
 const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    if (process.env.DEMO_MODE === 'true') {
+      const result = demoStore.deleteTask(req.params.id);
+      return res.status(200).json({ message: 'Task removed successfully', id: result.id });
+    }
 
+    // MongoDB Mode
+    const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
@@ -205,6 +236,12 @@ const deleteTask = async (req, res) => {
 // @access  Private
 const getTaskStats = async (req, res) => {
   try {
+    if (process.env.DEMO_MODE === 'true') {
+      const stats = demoStore.getTaskStats(req.user._id);
+      return res.status(200).json(stats);
+    }
+
+    // MongoDB Mode
     const team = await Team.findOne({
       $or: [{ creatorId: req.user._id }, { members: req.user._id }]
     }).populate('members', 'name email');

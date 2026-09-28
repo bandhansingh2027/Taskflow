@@ -1,0 +1,30 @@
+[
+  {
+    "_id": "usr_demo_1001",
+    "name": "Demo Admin",
+    "email": "demo@taskflow.com",
+    "password": "$2a$10$EQP8HaGxlGkeQYvafmRJP.F18T72QGoEZEVZLWsdWdbUJcB0WFf4m",
+    "createdAt": "2026-09-28T20:17:28.388Z"
+  },
+  {
+    "_id": "usr_alice_1002",
+    "name": "Alice Johnson",
+    "email": "alice@taskflow.com",
+    "password": "$2a$10$xZSSfMnzayDqXHt7QSxaEuhX9kYg56S.zRcexNXtnaBsjokcmvTy2",
+    "createdAt": "2026-09-28T20:17:28.388Z"
+  },
+  {
+    "_id": "usr_bob_1003",
+    "name": "Bob Smith",
+    "email": "bob@taskflow.com",
+    "password": "$2a$10$xZSSfMnzayDqXHt7QSxaEuhX9kYg56S.zRcexNXtnaBsjokcmvTy2",
+    "createdAt": "2026-09-28T20:17:28.388Z"
+  },
+  {
+    "_id": "usr_charlie_1004",
+    "name": "Charlie Brown",
+    "email": "charlie@taskflow.com",
+    "password": "$2a$10$xZSSfMnzayDqXHt7QSxaEuhX9kYg56S.zRcexNXtnaBsjokcmvTy2",
+    "createdAt": "2026-09-28T20:17:28.388Z"
+  }
+]

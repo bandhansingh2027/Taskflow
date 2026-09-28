@@ -1,5 +1,6 @@
 const Team = require('../models/Team');
 const User = require('../models/User');
+const demoStore = require('../services/demoStore');
 
 // @desc    Create a new team
 // @route   POST /api/teams
@@ -12,7 +13,12 @@ const createTeam = async (req, res) => {
       return res.status(400).json({ message: 'Team name is required' });
     }
 
-    // Check if user is already in a team created by them
+    if (process.env.DEMO_MODE === 'true') {
+      const createdTeam = demoStore.createTeam(name, description, req.user._id);
+      return res.status(201).json(createdTeam);
+    }
+
+    // MongoDB Mode
     const existingTeam = await Team.findOne({
       $or: [
         { creatorId: req.user._id },
@@ -35,11 +41,10 @@ const createTeam = async (req, res) => {
     });
 
     const populatedTeam = await Team.findById(team._id).populate('members', 'name email');
-
     res.status(201).json(populatedTeam);
   } catch (error) {
     console.error('Create team error:', error.message);
-    res.status(500).json({ message: 'Failed to create team', error: error.message });
+    res.status(400).json({ message: error.message || 'Failed to create team', error: error.message });
   }
 };
 
@@ -48,6 +53,12 @@ const createTeam = async (req, res) => {
 // @access  Private
 const getUserTeam = async (req, res) => {
   try {
+    if (process.env.DEMO_MODE === 'true') {
+      const team = demoStore.getUserTeam(req.user._id);
+      return res.status(200).json(team);
+    }
+
+    // MongoDB Mode
     const team = await Team.findOne({
       $or: [
         { creatorId: req.user._id },
@@ -77,13 +88,18 @@ const addTeamMember = async (req, res) => {
       return res.status(400).json({ message: 'Member email address is required' });
     }
 
+    if (process.env.DEMO_MODE === 'true') {
+      const updatedTeam = demoStore.addTeamMember(req.params.id, email, req.user._id);
+      return res.status(200).json(updatedTeam);
+    }
+
+    // MongoDB Mode
     const team = await Team.findById(req.params.id);
 
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    // Ensure logged-in user belongs to this team
     const isMember = team.members.some(
       (m) => m.toString() === req.user._id.toString()
     );
@@ -91,13 +107,11 @@ const addTeamMember = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to add members to this team' });
     }
 
-    // Find registered user by email
     const userToAdd = await User.findOne({ email: email.toLowerCase().trim() });
     if (!userToAdd) {
       return res.status(404).json({ message: 'No registered user found with this email' });
     }
 
-    // Check if user is already a member
     const alreadyInTeam = team.members.some(
       (m) => m.toString() === userToAdd._id.toString()
     );
@@ -112,7 +126,7 @@ const addTeamMember = async (req, res) => {
     res.status(200).json(updatedTeam);
   } catch (error) {
     console.error('Add team member error:', error.message);
-    res.status(500).json({ message: 'Failed to add team member', error: error.message });
+    res.status(400).json({ message: error.message || 'Failed to add team member', error: error.message });
   }
 };
 
@@ -121,6 +135,13 @@ const addTeamMember = async (req, res) => {
 // @access  Private
 const getTeamMembers = async (req, res) => {
   try {
+    if (process.env.DEMO_MODE === 'true') {
+      const team = demoStore.getUserTeam(req.user._id);
+      if (!team) return res.status(404).json({ message: 'Team not found' });
+      return res.status(200).json(team.members);
+    }
+
+    // MongoDB Mode
     const team = await Team.findById(req.params.id).populate('members', 'name email');
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
