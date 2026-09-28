@@ -1,16 +1,22 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const primaryUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskflow';
+  const primaryUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskflow';
   
   try {
+    const isAtlas = primaryUri.includes('mongodb+srv://');
     const conn = await mongoose.connect(primaryUri, {
-      serverSelectionTimeoutMS: 2500 // Quick timeout if local mongodb service isn't running
+      serverSelectionTimeoutMS: isAtlas ? 10000 : 2500
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn;
   } catch (error) {
-    console.warn(`Local MongoDB Unavailable (${error.message}). Initializing In-Memory Fallback...`);
+    if (process.env.MONGODB_URI || process.env.MONGO_URI) {
+      console.warn(`MongoDB Primary Connection Failed (${error.message}).`);
+    } else {
+      console.warn(`Local MongoDB Unavailable (${error.message}). Initializing In-Memory Fallback...`);
+    }
+
     try {
       const { MongoMemoryServer } = require('mongodb-memory-server');
       const mongoServer = await MongoMemoryServer.create();
@@ -20,7 +26,7 @@ const connectDB = async () => {
       return conn;
     } catch (memErr) {
       console.error('Failed to start in-memory MongoDB fallback:', memErr.message);
-      console.error('Please ensure MongoDB is running or configure MONGO_URI in .env');
+      console.error('Please configure MONGODB_URI in backend/.env');
       throw memErr;
     }
   }
