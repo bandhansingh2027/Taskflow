@@ -34,24 +34,29 @@ const writeData = (filePath, data) => {
   }
 };
 
-// Seed initial demo data if empty
+// Seed initial demo data if empty or missing demo user
 const seedDemoData = async () => {
   let users = readData(USERS_FILE);
   let teams = readData(TEAMS_FILE);
   let tasks = readData(TASKS_FILE);
 
-  if (users.length === 0) {
-    console.log('Seeding initial demo users...');
+  let demoUser = users.find((u) => u.email.toLowerCase() === 'demo@taskflow.com');
+  if (!demoUser) {
+    console.log('Seeding demo admin account (demo@taskflow.com)...');
     const hashedDemoPassword = await bcrypt.hash('demo123', 10);
-    const hashedMemberPassword = await bcrypt.hash('password123', 10);
-
-    const demoUser = {
+    demoUser = {
       _id: 'usr_demo_1001',
       name: 'Demo Admin',
       email: 'demo@taskflow.com',
       password: hashedDemoPassword,
       createdAt: new Date().toISOString()
     };
+    users.unshift(demoUser);
+    writeData(USERS_FILE, users);
+  }
+
+  if (users.length === 1) {
+    const hashedMemberPassword = await bcrypt.hash('password123', 10);
     const aliceUser = {
       _id: 'usr_alice_1002',
       name: 'Alice Johnson',
@@ -73,12 +78,11 @@ const seedDemoData = async () => {
       password: hashedMemberPassword,
       createdAt: new Date().toISOString()
     };
-
-    users = [demoUser, aliceUser, bobUser, charlieUser];
+    users.push(aliceUser, bobUser, charlieUser);
     writeData(USERS_FILE, users);
   }
 
-  const demoUser = users.find((u) => u.email === 'demo@taskflow.com') || users[0];
+  demoUser = users.find((u) => u.email.toLowerCase() === 'demo@taskflow.com') || users[0];
   const aliceUser = users.find((u) => u.email === 'alice@taskflow.com') || users[1];
   const bobUser = users.find((u) => u.email === 'bob@taskflow.com') || users[2];
   const charlieUser = users.find((u) => u.email === 'charlie@taskflow.com') || users[3];

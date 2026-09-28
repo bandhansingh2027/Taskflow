@@ -30,8 +30,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await API.post('/auth/login', { email, password });
-      const { token, _id, name, email: userEmail } = response.data;
-      const userData = { _id, name, email: userEmail };
+      const data = response.data;
+      const token = data.token;
+      const userData = data.user || { _id: data._id, name: data.name, email: data.email };
+
+      if (!token || !userData._id) {
+        return { success: false, message: 'Invalid response from server' };
+      }
 
       localStorage.setItem('taskflow_token', token);
       localStorage.setItem('taskflow_user', JSON.stringify(userData));
@@ -49,8 +54,13 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const response = await API.post('/auth/register', { name, email, password });
-      const { token, _id, name: userName, email: userEmail } = response.data;
-      const userData = { _id, name: userName, email: userEmail };
+      const data = response.data;
+      const token = data.token;
+      const userData = data.user || { _id: data._id, name: data.name, email: data.email };
+
+      if (!token || !userData._id) {
+        return { success: false, message: 'Invalid response from server' };
+      }
 
       localStorage.setItem('taskflow_token', token);
       localStorage.setItem('taskflow_user', JSON.stringify(userData));

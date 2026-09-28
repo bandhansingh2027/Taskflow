@@ -26,5 +26,12 @@
     "email": "charlie@taskflow.com",
     "password": "$2a$10$xZSSfMnzayDqXHt7QSxaEuhX9kYg56S.zRcexNXtnaBsjokcmvTy2",
     "createdAt": "2026-09-28T20:17:28.388Z"
+  },
+  {
+    "_id": "usr_1790627595261_387",
+    "name": "New Registered User",
+    "email": "newuser_1790627595142@taskflow.com",
+    "password": "$2a$10$eX0MAdJ7pK2JiWzfUwoh9.RX7oX7oS3RX6lDUy5UghYM4zMBiurQu",
+    "createdAt": "2026-09-28T20:33:15.261Z"
   }
 ]

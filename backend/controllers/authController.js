@@ -35,11 +35,18 @@ const registerUser = async (req, res) => {
       }
 
       const newUser = await demoStore.createUser(name, email, password);
+      const token = generateToken(newUser._id);
       return res.status(201).json({
+        success: true,
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        token: generateToken(newUser._id)
+        token: token,
+        user: {
+          _id: newUser._id,
+          name: newUser.name,
+          email: newUser.email
+        }
       });
     }
 
@@ -97,11 +104,18 @@ const loginUser = async (req, res) => {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
 
+      const token = generateToken(user._id);
       return res.status(200).json({
+        success: true,
         _id: user._id,
         name: user.name,
         email: user.email,
-        token: generateToken(user._id)
+        token: token,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email
+        }
       });
     }
 
