@@ -1,12 +1,18 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  const uri = (
+    process.env.MONGODB_URI ||
+    process.env.MONGO_URI ||
+    process.env.DATABASE_URL ||
+    process.env.MONGODB_URL ||
+    ''
+  ).trim();
 
-  if (!uri || uri.trim() === '' || uri.includes('127.0.0.1:27017')) {
+  if (!uri || uri.includes('127.0.0.1:27017')) {
     console.error('------------------------------------------------------------------');
     console.error('❌ MONGODB_URI IS MISSING OR NOT CONFIGURED FOR MONGODB ATLAS!');
-    console.error('Please open backend/.env and paste your MongoDB Atlas connection string:');
+    console.error('Please open Taskflow/backend/.env and paste your connection string:');
     console.error('MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/taskflow?retryWrites=true&w=majority');
     console.error('------------------------------------------------------------------');
     return null;

@@ -1,10 +1,18 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+
+// Load environment variables explicitly from backend/.env
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
 const connectDB = require('./config/db');
 
-// Load environment variables
-dotenv.config();
+// Safe debug log for MONGODB_URI presence
+const hasMongoUri = Boolean(
+  (process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGODB_URL || '').trim()
+);
+console.log(`MONGODB_URI loaded: ${hasMongoUri}`);
 
 // Connect to MongoDB
 connectDB();
