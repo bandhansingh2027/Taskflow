@@ -56,8 +56,25 @@ const Dashboard = () => {
         setTeamTasks([]);
       }
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError(err.response?.data?.message || 'Failed to load dashboard data. Please try again.');
+      console.error('Full Dashboard API Error Details:', {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        config: err.config
+      });
+
+      let displayErr = 'Failed to load dashboard data.';
+      if (err.response) {
+        displayErr = `[HTTP ${err.response.status}] ${err.response.data?.message || err.response.statusText || 'Server Error'}`;
+      } else if (err.request) {
+        displayErr = '[Network Error] Unable to connect to backend server at http://localhost:5000. Please ensure the backend server is running.';
+      } else {
+        displayErr = `[Error] ${err.message}`;
+      }
+
+      setError(displayErr);
     } finally {
       setLoading(false);
     }
