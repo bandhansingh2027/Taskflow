@@ -1,34 +1,35 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const primaryUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskflow';
-  
+  const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+  if (!uri || uri.trim() === '' || uri.includes('127.0.0.1:27017')) {
+    console.error('------------------------------------------------------------------');
+    console.error('❌ MONGODB_URI IS MISSING OR NOT CONFIGURED FOR MONGODB ATLAS!');
+    console.error('Please open backend/.env and paste your MongoDB Atlas connection string:');
+    console.error('MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/taskflow?retryWrites=true&w=majority');
+    console.error('------------------------------------------------------------------');
+    return null;
+  }
+
   try {
-    const isAtlas = primaryUri.includes('mongodb+srv://');
-    const conn = await mongoose.connect(primaryUri, {
-      serverSelectionTimeoutMS: isAtlas ? 10000 : 2500
+    const conn = await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 10000
     });
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+
+    const isAtlas = uri.includes('mongodb+srv://') || conn.connection.host.includes('mongodb.net');
+    if (isAtlas) {
+      console.log(`MongoDB Atlas Connected: ${conn.connection.host}`);
+    } else {
+      console.log(`MongoDB Connected: ${conn.connection.host}`);
+    }
     return conn;
   } catch (error) {
-    if (process.env.MONGODB_URI || process.env.MONGO_URI) {
-      console.warn(`MongoDB Primary Connection Failed (${error.message}).`);
-    } else {
-      console.warn(`Local MongoDB Unavailable (${error.message}). Initializing In-Memory Fallback...`);
-    }
-
-    try {
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      const mongoServer = await MongoMemoryServer.create();
-      const mongoUri = mongoServer.getUri();
-      const conn = await mongoose.connect(mongoUri);
-      console.log(`MongoDB Connected (In-Memory Fallback): ${conn.connection.host}`);
-      return conn;
-    } catch (memErr) {
-      console.error('Failed to start in-memory MongoDB fallback:', memErr.message);
-      console.error('Please configure MONGODB_URI in backend/.env');
-      throw memErr;
-    }
+    console.error('------------------------------------------------------------------');
+    console.error(`❌ MongoDB Atlas Connection Error: ${error.message}`);
+    console.error('Please check your MONGODB_URI username/password and Network Access IP Whitelist in MongoDB Atlas.');
+    console.error('------------------------------------------------------------------');
+    return null;
   }
 };
 
