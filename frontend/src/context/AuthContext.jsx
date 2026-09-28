@@ -1,80 +1,92 @@
 import React, { createContext, useState, useEffect } from 'react';
-import API from '../api/axios';
+import { defaultUser } from '../demo/demoData';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('taskflow_token') || null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Restore user session if stored in localStorage
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('taskflow_user');
-    const storedToken = localStorage.getItem('taskflow_token');
-    
-    if (storedUser && storedToken) {
+    if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
-        setToken(storedToken);
+        return JSON.parse(storedUser);
       } catch (err) {
         console.error('Error parsing stored user:', err);
-        localStorage.removeItem('taskflow_user');
-        localStorage.removeItem('taskflow_token');
       }
     }
-    setLoading(false);
+    // Default demo session if none set
+    return defaultUser;
+  });
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('taskflow_token') || 'demo_jwt_token_taskflow_2026';
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Ensure default demo login session exists on app init
+    if (!localStorage.getItem('taskflow_token')) {
+      localStorage.setItem('taskflow_token', 'demo_jwt_token_taskflow_2026');
+      localStorage.setItem('taskflow_user', JSON.stringify(defaultUser));
+    }
   }, []);
 
-  // Login handler
+  // Demo Login Handler
   const login = async (email, password) => {
     try {
-      const response = await API.post('/auth/login', { email, password });
-      const data = response.data;
-      const token = data.token;
-      const userData = data.user || { _id: data._id, name: data.name, email: data.email };
-
-      if (!token || !userData._id) {
-        return { success: false, message: 'Invalid response from server' };
+      if (!email || !password) {
+        return { success: false, message: 'Please provide both email and password.' };
       }
 
-      localStorage.setItem('taskflow_token', token);
+      const nameFromEmail = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+      const userData = {
+        _id: 'user_demo_101',
+        name: email === 'demo@taskflow.com' ? 'Demo User' : nameFromEmail,
+        email,
+        role: 'Project Manager'
+      };
+
+      const demoToken = 'demo_jwt_token_taskflow_2026';
+
+      localStorage.setItem('taskflow_token', demoToken);
       localStorage.setItem('taskflow_user', JSON.stringify(userData));
 
-      setToken(token);
+      setToken(demoToken);
       setUser(userData);
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed. Please check credentials.';
-      return { success: false, message };
+      return { success: false, message: 'Login failed. Please try again.' };
     }
   };
 
-  // Register handler
+  // Demo Register Handler
   const register = async (name, email, password) => {
     try {
-      const response = await API.post('/auth/register', { name, email, password });
-      const data = response.data;
-      const token = data.token;
-      const userData = data.user || { _id: data._id, name: data.name, email: data.email };
-
-      if (!token || !userData._id) {
-        return { success: false, message: 'Invalid response from server' };
+      if (!name || !email || !password) {
+        return { success: false, message: 'Please fill in all required fields.' };
       }
 
-      localStorage.setItem('taskflow_token', token);
+      const userData = {
+        _id: `user_demo_${Date.now()}`,
+        name,
+        email,
+        role: 'Team Member'
+      };
+
+      const demoToken = 'demo_jwt_token_taskflow_2026';
+
+      localStorage.setItem('taskflow_token', demoToken);
       localStorage.setItem('taskflow_user', JSON.stringify(userData));
 
-      setToken(token);
+      setToken(demoToken);
       setUser(userData);
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed. Please try again.';
-      return { success: false, message };
+      return { success: false, message: 'Registration failed. Please try again.' };
     }
   };
 
-  // Logout handler
+  // Demo Logout Handler
   const logout = () => {
     localStorage.removeItem('taskflow_token');
     localStorage.removeItem('taskflow_user');

@@ -12,6 +12,9 @@ import MyTeam from './pages/MyTeam';
 import Tasks from './pages/Tasks';
 import AddTask from './pages/AddTask';
 import EditTask from './pages/EditTask';
+import Notifications from './pages/Notifications';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 
 function App() {
   const { token } = useContext(AuthContext);
@@ -75,6 +78,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <EditTask />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />

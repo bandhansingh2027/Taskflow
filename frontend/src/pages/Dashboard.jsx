@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import API from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import { TaskContext } from '../context/TaskContext';
 import {
   Users,
   ListTodo,
@@ -11,99 +11,41 @@ import {
   PlusCircle,
   ArrowRight,
   User,
-  Tag,
-  Calendar
+  Calendar,
+  TrendingUp,
+  Award
 } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
-  const [stats, setStats] = useState({
-    teamName: 'Loading...',
-    total: 0,
-    completed: 0,
-    pending: 0,
-    inProgress: 0
-  });
-  const [teamTasks, setTeamTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { tasks, stats, updateTaskStatus, profile } = useContext(TaskContext);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const [statsRes, tasksRes] = await Promise.all([
-        API.get('/tasks/stats'),
-        API.get('/tasks')
-      ]);
-
-      if (statsRes && statsRes.data) {
-        setStats({
-          teamName: statsRes.data.teamName || 'Personal Workspace',
-          teamDescription: statsRes.data.teamDescription || '',
-          memberCount: statsRes.data.memberCount || 1,
-          total: statsRes.data.total ?? 0,
-          completed: statsRes.data.completed ?? 0,
-          pending: statsRes.data.pending ?? 0,
-          inProgress: statsRes.data.inProgress ?? 0
-        });
-      }
-
-      if (tasksRes && Array.isArray(tasksRes.data)) {
-        setTeamTasks(tasksRes.data);
-      } else {
-        setTeamTasks([]);
-      }
-    } catch (err) {
-      console.error('Full Dashboard API Error Details:', {
-        message: err.message,
-        code: err.code,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        config: err.config
-      });
-
-      let displayErr = 'Failed to load dashboard data.';
-      if (err.response) {
-        displayErr = `[HTTP ${err.response.status}] ${err.response.data?.message || err.response.statusText || 'Server Error'}`;
-      } else if (err.request) {
-        displayErr = '[Network Error] Unable to connect to backend server at http://localhost:5000. Please ensure the backend server is running.';
-      } else {
-        displayErr = `[Error] ${err.message}`;
-      }
-
-      setError(displayErr);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const handleStatusChange = async (taskId, newStatus) => {
-    try {
-      await API.put(`/tasks/${taskId}`, { status: newStatus });
-      fetchDashboardData();
-    } catch (err) {
-      console.error('Error updating task status:', err);
-      alert('Failed to update task status.');
-    }
+  const handleStatusChange = (taskId, newStatus) => {
+    updateTaskStatus(taskId, newStatus);
   };
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Completed':
-        return <span className="badge badge-completed"><CheckCircle2 size={13} /> Completed</span>;
+        return (
+          <span className="badge badge-completed">
+            <CheckCircle2 size={13} /> Completed
+          </span>
+        );
       case 'In Progress':
-        return <span className="badge badge-in-progress"><Clock size={13} /> In Progress</span>;
+        return (
+          <span className="badge badge-in-progress">
+            <Clock size={13} /> In Progress
+          </span>
+        );
       case 'To Do':
       case 'Pending':
       default:
-        return <span className="badge badge-pending"><AlertCircle size={13} /> To Do</span>;
+        return (
+          <span className="badge badge-pending">
+            <AlertCircle size={13} /> To Do
+          </span>
+        );
     }
   };
 
@@ -129,14 +71,14 @@ const Dashboard = () => {
             </span>
           </div>
           <h1>
-            Welcome back, <span className="highlight-text">{user?.name}</span> 👋
+            Welcome back, <span className="highlight-text">{profile?.name || user?.name}</span> 👋
           </h1>
-          <p>Track team progress, tasks, and member assignments in real-time.</p>
+          <p>Track team progress, tasks, and productivity metrics in real-time.</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link to="/team" className="btn btn-secondary">
             <Users size={18} />
-            <span>My Team</span>
+            <span>My Team ({stats.memberCount})</span>
           </Link>
           <Link to="/add-task" className="btn btn-primary">
             <PlusCircle size={18} />
@@ -145,14 +87,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="alert alert-error">
-          <AlertCircle size={18} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Stats Cards */}
+      {/* Stats Grid Cards */}
       <div className="stats-grid">
         <div className="stat-card stat-total">
           <div className="stat-icon-wrapper">
@@ -195,6 +130,31 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Productivity Progress Meter */}
+      <div className="productivity-card" style={{ marginBottom: '2.5rem' }}>
+        <div className="productivity-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="productivity-icon">
+              <TrendingUp size={22} />
+            </div>
+            <div>
+              <h3>Workspace Productivity Score</h3>
+              <p>Percentage of assigned tasks completed successfully</p>
+            </div>
+          </div>
+          <div className="productivity-score">
+            <Award size={20} className="highlight-text" />
+            <span>{stats.productivity}% Completed</span>
+          </div>
+        </div>
+        <div className="progress-bar-container">
+          <div
+            className="progress-bar-fill"
+            style={{ width: `${stats.productivity}%` }}
+          />
+        </div>
+      </div>
+
       {/* Team Tasks Section */}
       <div className="section-header">
         <div className="section-title">
@@ -202,23 +162,17 @@ const Dashboard = () => {
           <h2>Team Tasks Overview</h2>
         </div>
         <Link to="/tasks" className="section-link">
-          <span>View All Tasks</span>
+          <span>View All ({tasks.length}) Tasks</span>
           <ArrowRight size={16} />
         </Link>
       </div>
 
-      {/* Task List Table View: Task Name | Assigned To | Due Date | Priority | Status | Quick Action */}
-      {loading ? (
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Loading team tasks...</p>
-        </div>
-      ) : teamTasks.length === 0 ? (
+      {tasks.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">
             <ListTodo size={40} />
           </div>
-          <h3>No team tasks found</h3>
+          <h3>No tasks found</h3>
           <p>Get started by creating and assigning a task to a team member!</p>
           <Link to="/add-task" className="btn btn-primary">
             <PlusCircle size={18} />
@@ -230,7 +184,7 @@ const Dashboard = () => {
           <table className="team-tasks-table">
             <thead>
               <tr>
-                <th>Task Name</th>
+                <th>Task Title</th>
                 <th>Assigned To</th>
                 <th>Due Date</th>
                 <th>Priority</th>
@@ -239,7 +193,7 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {teamTasks.slice(0, 8).map((task) => (
+              {tasks.slice(0, 8).map((task) => (
                 <tr key={task._id}>
                   <td className="task-name-cell">
                     <span className="task-table-title">{task.title}</span>
@@ -254,13 +208,25 @@ const Dashboard = () => {
                     </div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: task.dueDate ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        fontSize: '0.85rem',
+                        color: task.dueDate ? 'var(--text-secondary)' : 'var(--text-muted)'
+                      }}
+                    >
                       <Calendar size={13} />
                       <span>{formatDate(task.dueDate)}</span>
                     </div>
                   </td>
                   <td>
-                    <span className={`priority-tag priority-${task.priority?.toLowerCase() || 'medium'}`}>
+                    <span
+                      className={`priority-tag priority-${
+                        task.priority?.toLowerCase() || 'medium'
+                      }`}
+                    >
                       {task.priority || 'Medium'}
                     </span>
                   </td>

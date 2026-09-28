@@ -1,13 +1,12 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogIn, Mail, Lock, CheckSquare, AlertCircle } from 'lucide-react';
+import { CheckSquare, Mail, Lock, LogIn, AlertCircle, Sparkles } from 'lucide-react';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('demo@taskflow.com');
+  const [password, setPassword] = useState('demo123');
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -16,21 +15,17 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    // Basic Validation
-    if (!email.trim() || !password) {
-      setError('Please fill in both email and password.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const result = await login(email, password);
-    setIsSubmitting(false);
-
-    if (result.success) {
+    const res = await login(email, password);
+    if (res.success) {
       navigate('/dashboard');
     } else {
-      setError(result.message);
+      setError(res.message);
     }
+  };
+
+  const handleFillDemo = () => {
+    setEmail('demo@taskflow.com');
+    setPassword('demo123');
   };
 
   return (
@@ -40,8 +35,8 @@ const Login = () => {
           <div className="auth-logo">
             <CheckSquare size={32} />
           </div>
-          <h2>Welcome Back</h2>
-          <p>Log in to your TaskFlow account</p>
+          <h2>Welcome to TaskFlow</h2>
+          <p>Sign in to access your task management workspace</p>
         </div>
 
         {error && (
@@ -51,7 +46,17 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        {/* Preset Quick Fill Banner */}
+        <div
+          onClick={handleFillDemo}
+          className="demo-fill-banner"
+          title="Click to load preset presentation credentials"
+        >
+          <Sparkles size={16} className="highlight-text" />
+          <span>Demo Credentials: demo@taskflow.com / demo123</span>
+        </div>
+
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <div className="input-with-icon">
@@ -59,7 +64,7 @@ const Login = () => {
               <input
                 type="email"
                 id="email"
-                placeholder="name@example.com"
+                placeholder="demo@taskflow.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -82,31 +87,17 @@ const Login = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary btn-full"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <span className="btn-loading">
-                <span className="spinner-sm"></span> Logging in...
-              </span>
-            ) : (
-              <>
-                <LogIn size={18} />
-                <span>Log In</span>
-              </>
-            )}
+          <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '1.5rem' }}>
+            <LogIn size={18} />
+            <span>Sign In to Dashboard</span>
           </button>
         </form>
 
         <div className="auth-footer">
-          <p>
-            Don't have an account?{' '}
-            <Link to="/register" className="auth-link">
-              Create Account
-            </Link>
-          </p>
+          Don't have an account?{' '}
+          <Link to="/register" className="auth-link">
+            Create Account
+          </Link>
         </div>
       </div>
     </div>

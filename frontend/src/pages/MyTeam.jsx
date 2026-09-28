@@ -1,41 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import API from '../api/axios';
-import { Users, UserPlus, Shield, Mail, PlusCircle, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useContext } from 'react';
+import { TaskContext } from '../context/TaskContext';
+import { Users, UserPlus, Shield, Mail, PlusCircle, CheckCircle2, Trash2, Search, User } from 'lucide-react';
 
 const MyTeam = () => {
-  const [team, setTeam] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { team, createTeam, addTeamMember, deleteTeamMember } = useContext(TaskContext);
+
+  // Form states
+  const [teamName, setTeamName] = useState('');
+  const [teamDesc, setTeamDesc] = useState('');
+
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberName, setMemberName] = useState('');
+  const [memberRole, setMemberRole] = useState('Frontend Engineer');
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Create Team state
-  const [teamName, setTeamName] = useState('');
-  const [teamDesc, setTeamDesc] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-
-  // Add Member state
-  const [memberEmail, setMemberEmail] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
-
-  const fetchTeam = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const response = await API.get('/teams');
-      setTeam(response.data);
-    } catch (err) {
-      console.error('Error fetching team:', err);
-      setError(err.response?.data?.message || 'Failed to load team data.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeam();
-  }, []);
-
-  const handleCreateTeam = async (e) => {
+  const handleCreateTeam = (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -45,58 +27,45 @@ const MyTeam = () => {
       return;
     }
 
-    setIsCreating(true);
-    try {
-      const response = await API.post('/teams', {
-        name: teamName.trim(),
-        description: teamDesc.trim()
-      });
-      setTeam(response.data);
-      setSuccess('Team created successfully!');
-      setTeamName('');
-      setTeamDesc('');
-    } catch (err) {
-      console.error('Create team error:', err);
-      setError(err.response?.data?.message || 'Failed to create team.');
-    } finally {
-      setIsCreating(false);
-    }
+    createTeam(teamName.trim(), teamDesc.trim());
+    setSuccess('Team created successfully!');
+    setTeamName('');
+    setTeamDesc('');
   };
 
-  const handleAddMember = async (e) => {
+  const handleAddMember = (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
     if (!memberEmail.trim()) {
-      setError('Please enter a user email address.');
+      setError('Please enter a team member email address.');
       return;
     }
 
-    setIsAdding(true);
-    try {
-      const response = await API.post(`/teams/${team._id}/members`, {
-        email: memberEmail.trim()
-      });
-      setTeam(response.data);
-      setSuccess(`Added member (${memberEmail}) to team successfully!`);
-      setMemberEmail('');
-    } catch (err) {
-      console.error('Add member error:', err);
-      setError(err.response?.data?.message || 'Failed to add member.');
-    } finally {
-      setIsAdding(false);
+    addTeamMember(memberEmail.trim(), memberName.trim(), memberRole);
+    setSuccess(`Added team member (${memberEmail}) successfully!`);
+    setMemberEmail('');
+    setMemberName('');
+
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleDeleteMember = (memberId, name) => {
+    if (window.confirm(`Are you sure you want to remove ${name} from the team?`)) {
+      deleteTeamMember(memberId);
+      setSuccess(`Removed ${name} from team.`);
+      setTimeout(() => setSuccess(''), 3000);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading team information...</p>
-      </div>
-    );
-  }
+  const membersList = team?.members || [];
+  const filteredMembers = membersList.filter((m) =>
+    !searchTerm.trim() ||
+    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (m.role && m.role.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="page-container">
@@ -104,13 +73,12 @@ const MyTeam = () => {
       <div className="page-header">
         <div>
           <h1>My Team</h1>
-          <p>Manage your team workspace and members.</p>
+          <p>Manage your workspace team members, roles, and collaboration.</p>
         </div>
       </div>
 
       {error && (
         <div className="alert alert-error">
-          <AlertCircle size={18} />
           <span>{error}</span>
         </div>
       )}
@@ -129,7 +97,7 @@ const MyTeam = () => {
             <div className="auth-logo" style={{ marginBottom: '1rem' }}>
               <Users size={32} />
             </div>
-            <h2>Create Your Team</h2>
+            <h2>Create Your Team Workspace</h2>
             <p>Set up a team to assign tasks and collaborate with team members.</p>
           </div>
 
@@ -160,28 +128,16 @@ const MyTeam = () => {
               />
             </div>
 
-            <button
-              type="submit"
-              className="btn btn-primary btn-full"
-              disabled={isCreating}
-            >
-              {isCreating ? (
-                <span className="btn-loading">
-                  <span className="spinner-sm"></span> Creating Team...
-                </span>
-              ) : (
-                <>
-                  <PlusCircle size={18} />
-                  <span>Create Team</span>
-                </>
-              )}
+            <button type="submit" className="btn btn-primary btn-full">
+              <PlusCircle size={18} />
+              <span>Create Team Workspace</span>
             </button>
           </form>
         </div>
       ) : (
         /* Active Team View */
         <div className="team-layout">
-          {/* Team Details Overview */}
+          {/* Team Banner */}
           <div className="team-banner">
             <div className="team-banner-header">
               <div className="team-badge-icon">
@@ -189,68 +145,130 @@ const MyTeam = () => {
               </div>
               <div>
                 <h2>{team.name}</h2>
-                <p>{team.description || 'No description provided.'}</p>
+                <p>{team.description || 'Core product engineering & design workspace'}</p>
               </div>
             </div>
             <div className="team-stats-pill">
-              <span>{team.members?.length || 0} Members</span>
+              <span>{membersList.length} Active Members</span>
             </div>
           </div>
 
-          {/* Add Team Member Section */}
+          {/* Add Team Member Form */}
           <div className="form-card" style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3
+              style={{
+                fontSize: '1.1rem',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
               <UserPlus size={18} className="highlight-text" />
-              Add Team Member
+              Add New Team Member
             </h3>
 
-            <form onSubmit={handleAddMember} className="add-member-form">
-              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                <div className="input-with-icon">
-                  <Mail size={18} className="input-icon" />
-                  <input
-                    type="email"
-                    placeholder="Enter registered user email address..."
-                    value={memberEmail}
-                    onChange={(e) => setMemberEmail(e.target.value)}
-                    required
-                  />
+            <form onSubmit={handleAddMember}>
+              <div className="form-row" style={{ marginBottom: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Member Email *</label>
+                  <div className="input-with-icon">
+                    <Mail size={18} className="input-icon" />
+                    <input
+                      type="email"
+                      placeholder="e.g. member@taskflow.com"
+                      value={memberEmail}
+                      onChange={(e) => setMemberEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Member Full Name</label>
+                  <div className="input-with-icon">
+                    <User size={18} className="input-icon" />
+                    <input
+                      type="text"
+                      placeholder="e.g. John Doe"
+                      value={memberName}
+                      onChange={(e) => setMemberName(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isAdding}
-                style={{ whiteSpace: 'nowrap' }}
-              >
-                {isAdding ? 'Adding...' : 'Add Member'}
-              </button>
+
+              <div className="form-row" style={{ alignItems: 'flex-end' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Role / Position</label>
+                  <div className="input-with-icon">
+                    <Shield size={18} className="input-icon" />
+                    <select
+                      value={memberRole}
+                      onChange={(e) => setMemberRole(e.target.value)}
+                    >
+                      <option value="Frontend Engineer">Frontend Engineer</option>
+                      <option value="Backend Engineer">Backend Engineer</option>
+                      <option value="UI/UX Designer">UI/UX Designer</option>
+                      <option value="Product Manager">Product Manager</option>
+                      <option value="QA Specialist">QA Specialist</option>
+                      <option value="DevOps Lead">DevOps Lead</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>
+                  <UserPlus size={18} />
+                  <span>Add Member</span>
+                </button>
+              </div>
             </form>
           </div>
 
-          {/* Team Members List */}
-          <div className="section-header">
+          {/* Members List Header & Search */}
+          <div className="section-header" style={{ marginBottom: '1.25rem' }}>
             <div className="section-title">
               <Shield size={20} />
-              <h2>Team Members</h2>
+              <h2>Team Members ({filteredMembers.length})</h2>
+            </div>
+            <div className="search-box" style={{ maxWidth: '280px' }}>
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search member by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
 
+          {/* Members Grid */}
           <div className="members-grid">
-            {team.members && team.members.length > 0 ? (
-              team.members.map((member) => (
+            {filteredMembers.length > 0 ? (
+              filteredMembers.map((member) => (
                 <div key={member._id} className="member-card">
-                  <div className="member-avatar">
-                    {member.name ? member.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <div className="member-info">
+                  <div className="member-avatar">{member.avatar || member.name.charAt(0).toUpperCase()}</div>
+                  <div className="member-info" style={{ flex: 1 }}>
                     <h4>{member.name}</h4>
                     <p>{member.email}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
+                      <span className="role-tag">{member.role || 'Member'}</span>
+                      <span className={`status-dot status-${(member.status || 'online').toLowerCase()}`} />
+                    </div>
                   </div>
+                  {member._id !== 'user_demo_101' && (
+                    <button
+                      onClick={() => handleDeleteMember(member._id, member.name)}
+                      className="action-btn delete-btn"
+                      title="Remove Member"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               ))
             ) : (
-              <p style={{ color: 'var(--text-secondary)' }}>No team members found.</p>
+              <p style={{ color: 'var(--text-secondary)' }}>No matching team members found.</p>
             )}
           </div>
         </div>

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import API from '../api/axios';
+import { TaskContext } from '../context/TaskContext';
 import { AuthContext } from '../context/AuthContext';
-import { PlusCircle, ArrowLeft, AlertCircle, FileText, Tag, Flag, User, Calendar } from 'lucide-react';
+import { PlusCircle, ArrowLeft, FileText, Tag, Flag, User, Calendar, AlertCircle } from 'lucide-react';
 
 const AddTask = () => {
+  const { team, addTask, profile } = useContext(TaskContext);
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -12,38 +13,13 @@ const AddTask = () => {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('To Do');
   const [priority, setPriority] = useState('Medium');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [assignedTo, setAssignedTo] = useState(
+    team?.members?.[0]?._id || user?._id || 'user_demo_101'
+  );
   const [dueDate, setDueDate] = useState('');
-
-  const [members, setMembers] = useState([]);
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const fetchTeamMembers = async () => {
-      try {
-        const res = await API.get('/teams');
-        if (res.data && res.data.members) {
-          setMembers(res.data.members);
-          // Default assignedTo to current user if present in members
-          setAssignedTo(user?._id || res.data.members[0]?._id || '');
-        } else if (user) {
-          setMembers([{ _id: user._id, name: user.name, email: user.email }]);
-          setAssignedTo(user._id);
-        }
-      } catch (err) {
-        console.error('Error fetching team members:', err);
-        if (user) {
-          setMembers([{ _id: user._id, name: user.name, email: user.email }]);
-          setAssignedTo(user._id);
-        }
-      }
-    };
-
-    fetchTeamMembers();
-  }, [user]);
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
@@ -52,26 +28,21 @@ const AddTask = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    addTask({
+      title: title.trim(),
+      description: description.trim(),
+      status,
+      priority,
+      assignedTo,
+      dueDate
+    });
 
-    try {
-      await API.post('/tasks', {
-        title: title.trim(),
-        description: description.trim(),
-        status,
-        priority,
-        assignedTo: assignedTo || user?._id,
-        dueDate: dueDate || null
-      });
-
-      navigate('/tasks');
-    } catch (err) {
-      console.error('Error creating task:', err);
-      setError(err.response?.data?.message || 'Failed to create task. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    navigate('/tasks');
   };
+
+  const membersList = team?.members || [
+    { _id: 'user_demo_101', name: profile?.name || user?.name || 'Demo User', email: profile?.email || user?.email || 'demo@taskflow.com' }
+  ];
 
   return (
     <div className="page-container container-narrow">
@@ -101,7 +72,7 @@ const AddTask = () => {
               <input
                 type="text"
                 id="title"
-                placeholder="e.g. Implement User Authentication"
+                placeholder="e.g. Implement User Authentication UI"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -131,15 +102,11 @@ const AddTask = () => {
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
               >
-                {members.length > 0 ? (
-                  members.map((member) => (
-                    <option key={member._id} value={member._id}>
-                      {member.name} ({member.email})
-                    </option>
-                  ))
-                ) : (
-                  <option value={user?._id}>{user?.name} (Me)</option>
-                )}
+                {membersList.map((member) => (
+                  <option key={member._id} value={member._id}>
+                    {member.name} ({member.email})
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -197,21 +164,9 @@ const AddTask = () => {
             <Link to="/tasks" className="btn btn-secondary">
               Cancel
             </Link>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="btn-loading">
-                  <span className="spinner-sm"></span> Saving...
-                </span>
-              ) : (
-                <>
-                  <PlusCircle size={18} />
-                  <span>Create Task</span>
-                </>
-              )}
+            <button type="submit" className="btn btn-primary">
+              <PlusCircle size={18} />
+              <span>Create Task</span>
             </button>
           </div>
         </form>

@@ -1,76 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import API from '../api/axios';
+import { TaskContext } from '../context/TaskContext';
 import TaskCard from '../components/TaskCard';
 import {
   Search,
   Filter,
   PlusCircle,
   ListTodo,
-  AlertCircle,
   RotateCcw
 } from 'lucide-react';
 
 const Tasks = () => {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { tasks, deleteTask, updateTaskStatus } = useContext(TaskContext);
 
-  // Filters
+  // Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
 
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const params = {};
-      if (searchTerm.trim()) params.search = searchTerm.trim();
-      if (statusFilter !== 'All') params.status = statusFilter;
-      if (priorityFilter !== 'All') params.priority = priorityFilter;
-
-      const response = await API.get('/tasks', { params });
-      setTasks(response.data);
-    } catch (err) {
-      console.error('Error fetching tasks:', err);
-      setError('Failed to fetch tasks. Please try again.');
-    } finally {
-      setLoading(false);
+  const handleDeleteTask = (taskId) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      deleteTask(taskId);
     }
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchTasks();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter, priorityFilter]);
-
-  const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
-
-    try {
-      await API.delete(`/tasks/${taskId}`);
-      setTasks(tasks.filter((task) => task._id !== taskId));
-    } catch (err) {
-      console.error('Error deleting task:', err);
-      alert('Failed to delete task.');
-    }
-  };
-
-  const handleStatusChange = async (taskId, newStatus) => {
-    try {
-      const res = await API.put(`/tasks/${taskId}`, { status: newStatus });
-      setTasks(
-        tasks.map((task) => (task._id === taskId ? res.data : task))
-      );
-    } catch (err) {
-      console.error('Error updating task status:', err);
-      alert('Failed to update task status.');
-    }
+  const handleStatusChange = (taskId, newStatus) => {
+    updateTaskStatus(taskId, newStatus);
   };
 
   const handleResetFilters = () => {
@@ -79,13 +34,35 @@ const Tasks = () => {
     setPriorityFilter('All');
   };
 
+  // Filter tasks locally in memory
+  const filteredTasks = tasks.filter((task) => {
+    // Search matching
+    const matchesSearch =
+      !searchTerm.trim() ||
+      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // Status matching
+    const matchesStatus =
+      statusFilter === 'All' ||
+      task.status === statusFilter ||
+      (statusFilter === 'To Do' && task.status === 'Pending') ||
+      (statusFilter === 'Pending' && task.status === 'To Do');
+
+    // Priority matching
+    const matchesPriority =
+      priorityFilter === 'All' || task.priority === priorityFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
   return (
     <div className="page-container">
-      {/* Header */}
+      {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1>Team Tasks</h1>
-          <p>Search, filter, and assign team tasks effectively.</p>
+          <h1>Team Tasks ({tasks.length})</h1>
+          <p>Search, filter, edit, and assign team tasks effectively.</p>
         </div>
         <Link to="/add-task" className="btn btn-primary">
           <PlusCircle size={18} />
@@ -93,14 +70,7 @@ const Tasks = () => {
         </Link>
       </div>
 
-      {error && (
-        <div className="alert alert-error">
-          <AlertCircle size={18} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Search & Filter Controls */}
+      {/* Filter Bar */}
       <div className="filter-bar">
         {/* Search input */}
         <div className="search-box">
@@ -155,13 +125,8 @@ const Tasks = () => {
         </div>
       </div>
 
-      {/* Task List / Grid */}
-      {loading ? (
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Fetching team tasks...</p>
-        </div>
-      ) : tasks.length === 0 ? (
+      {/* Task Grid */}
+      {filteredTasks.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">
             <ListTodo size={40} />
@@ -170,7 +135,7 @@ const Tasks = () => {
           <p>
             {searchTerm || statusFilter !== 'All' || priorityFilter !== 'All'
               ? 'No tasks match your current filters. Try resetting your search.'
-              : 'Your team has no active tasks. Add a new task to get started!'}
+              : 'Your workspace has no active tasks. Add a new task to get started!'}
           </p>
           {searchTerm || statusFilter !== 'All' || priorityFilter !== 'All' ? (
             <button onClick={handleResetFilters} className="btn btn-secondary">
@@ -185,7 +150,7 @@ const Tasks = () => {
         </div>
       ) : (
         <div className="task-grid">
-          {tasks.map((task) => (
+          {filteredTasks.map((task) => (
             <TaskCard
               key={task._id}
               task={task}

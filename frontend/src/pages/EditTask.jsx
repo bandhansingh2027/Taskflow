@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import API from '../api/axios';
-import { AuthContext } from '../context/AuthContext';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { TaskContext } from '../context/TaskContext';
 import { Save, ArrowLeft, AlertCircle, FileText, Tag, Flag, User, Calendar } from 'lucide-react';
 
 const EditTask = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { tasks, team, updateTask } = useContext(TaskContext);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -15,59 +14,25 @@ const EditTask = () => {
   const [priority, setPriority] = useState('Medium');
   const [assignedTo, setAssignedTo] = useState('');
   const [dueDate, setDueDate] = useState('');
-
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError('');
+    const existingTask = tasks.find((t) => t._id === id);
+    if (existingTask) {
+      setTitle(existingTask.title || '');
+      setDescription(existingTask.description || '');
+      setStatus(existingTask.status === 'Pending' ? 'To Do' : existingTask.status || 'To Do');
+      setPriority(existingTask.priority || 'Medium');
+      setAssignedTo(
+        typeof existingTask.assignedTo === 'object'
+          ? existingTask.assignedTo._id
+          : existingTask.assignedTo || ''
+      );
+      setDueDate(existingTask.dueDate ? existingTask.dueDate.split('T')[0] : '');
+    }
+  }, [id, tasks]);
 
-        const [tasksRes, teamRes] = await Promise.all([
-          API.get('/tasks'),
-          API.get('/teams')
-        ]);
-
-        const foundTask = tasksRes.data.find((t) => t._id === id);
-        if (!foundTask) {
-          setError('Task not found');
-          return;
-        }
-
-        setTitle(foundTask.title);
-        setDescription(foundTask.description || '');
-        setStatus(foundTask.status === 'Pending' ? 'To Do' : (foundTask.status || 'To Do'));
-        setPriority(foundTask.priority || 'Medium');
-        setAssignedTo(foundTask.assignedTo?._id || foundTask.assignedTo || '');
-
-        if (foundTask.dueDate) {
-          const d = new Date(foundTask.dueDate);
-          setDueDate(d.toISOString().split('T')[0]);
-        } else {
-          setDueDate('');
-        }
-
-        if (teamRes.data && teamRes.data.members) {
-          setMembers(teamRes.data.members);
-        } else if (user) {
-          setMembers([{ _id: user._id, name: user.name, email: user.email }]);
-        }
-      } catch (err) {
-        console.error('Error fetching task details:', err);
-        setError('Failed to fetch task details.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [id, user]);
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
@@ -76,35 +41,19 @@ const EditTask = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    updateTask(id, {
+      title: title.trim(),
+      description: description.trim(),
+      status,
+      priority,
+      assignedTo,
+      dueDate
+    });
 
-    try {
-      await API.put(`/tasks/${id}`, {
-        title: title.trim(),
-        description: description.trim(),
-        status,
-        priority,
-        assignedTo,
-        dueDate: dueDate || null
-      });
-
-      navigate('/tasks');
-    } catch (err) {
-      console.error('Error updating task:', err);
-      setError(err.response?.data?.message || 'Failed to update task.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    navigate('/tasks');
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading task details...</p>
-      </div>
-    );
-  }
+  const membersList = team?.members || [];
 
   return (
     <div className="page-container container-narrow">
@@ -113,8 +62,8 @@ const EditTask = () => {
           <ArrowLeft size={18} />
           <span>Back to Tasks</span>
         </Link>
-        <h1>Edit Team Task</h1>
-        <p>Update task details, assigned member, status, or priority level.</p>
+        <h1>Edit Task</h1>
+        <p>Update task details, status, or assignee.</p>
       </div>
 
       {error && (
@@ -134,7 +83,7 @@ const EditTask = () => {
               <input
                 type="text"
                 id="title"
-                placeholder="e.g. Implement User Authentication"
+                placeholder="Task title..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -148,7 +97,7 @@ const EditTask = () => {
             <textarea
               id="description"
               rows={4}
-              placeholder="Add details, instructions, or subtasks..."
+              placeholder="Task description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -164,15 +113,11 @@ const EditTask = () => {
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
               >
-                {members.length > 0 ? (
-                  members.map((member) => (
-                    <option key={member._id} value={member._id}>
-                      {member.name} ({member.email})
-                    </option>
-                  ))
-                ) : (
-                  <option value={user?._id}>{user?.name} (Me)</option>
-                )}
+                {membersList.map((member) => (
+                  <option key={member._id} value={member._id}>
+                    {member.name} ({member.email})
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -180,7 +125,7 @@ const EditTask = () => {
           {/* Status, Priority & Due Date Row */}
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="status">Task Status</label>
+              <label htmlFor="status">Status</label>
               <div className="input-with-icon">
                 <Tag size={18} className="input-icon" />
                 <select
@@ -230,21 +175,9 @@ const EditTask = () => {
             <Link to="/tasks" className="btn btn-secondary">
               Cancel
             </Link>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="btn-loading">
-                  <span className="spinner-sm"></span> Saving...
-                </span>
-              ) : (
-                <>
-                  <Save size={18} />
-                  <span>Update Task</span>
-                </>
-              )}
+            <button type="submit" className="btn btn-primary">
+              <Save size={18} />
+              <span>Save Changes</span>
             </button>
           </div>
         </form>

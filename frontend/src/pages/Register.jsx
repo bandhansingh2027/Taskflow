@@ -1,15 +1,13 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { UserPlus, User, Mail, Lock, CheckSquare, AlertCircle } from 'lucide-react';
+import { CheckSquare, User, Mail, Lock, UserPlus, AlertCircle } from 'lucide-react';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { register } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -18,30 +16,16 @@ const Register = () => {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (!name.trim() || !email.trim() || !password) {
-      setError('Please fill in all fields.');
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError('Please fill in all required fields.');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const result = await register(name, email, password);
-    setIsSubmitting(false);
-
-    if (result.success) {
+    const res = await register(name.trim(), email.trim(), password);
+    if (res.success) {
       navigate('/dashboard');
     } else {
-      setError(result.message);
+      setError(res.message);
     }
   };
 
@@ -53,7 +37,7 @@ const Register = () => {
             <CheckSquare size={32} />
           </div>
           <h2>Create Account</h2>
-          <p>Join TaskFlow to organize your daily work</p>
+          <p>Get started with TaskFlow workspace</p>
         </div>
 
         {error && (
@@ -63,7 +47,7 @@ const Register = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="name">Full Name</label>
             <div className="input-with-icon">
@@ -71,7 +55,7 @@ const Register = () => {
               <input
                 type="text"
                 id="name"
-                placeholder="John Doe"
+                placeholder="e.g. Alex Morgan"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -86,7 +70,7 @@ const Register = () => {
               <input
                 type="email"
                 id="email"
-                placeholder="name@example.com"
+                placeholder="alex@taskflow.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -101,7 +85,7 @@ const Register = () => {
               <input
                 type="password"
                 id="password"
-                placeholder="Minimum 6 characters"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -109,46 +93,17 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <div className="input-with-icon">
-              <Lock size={18} className="input-icon" />
-              <input
-                type="password"
-                id="confirmPassword"
-                placeholder="Re-enter password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="btn btn-primary btn-full"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <span className="btn-loading">
-                <span className="spinner-sm"></span> Registering...
-              </span>
-            ) : (
-              <>
-                <UserPlus size={18} />
-                <span>Sign Up</span>
-              </>
-            )}
+          <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '1.5rem' }}>
+            <UserPlus size={18} />
+            <span>Create Account & Log In</span>
           </button>
         </form>
 
         <div className="auth-footer">
-          <p>
-            Already have an account?{' '}
-            <Link to="/login" className="auth-link">
-              Log In
-            </Link>
-          </p>
+          Already have an account?{' '}
+          <Link to="/login" className="auth-link">
+            Sign In
+          </Link>
         </div>
       </div>
     </div>
