@@ -11,7 +11,8 @@ import {
   PlusCircle,
   ArrowRight,
   User,
-  Tag
+  Tag,
+  Calendar
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -37,11 +38,26 @@ const Dashboard = () => {
         API.get('/tasks')
       ]);
 
-      setStats(statsRes.data);
-      setTeamTasks(tasksRes.data);
+      if (statsRes && statsRes.data) {
+        setStats({
+          teamName: statsRes.data.teamName || 'Personal Workspace',
+          teamDescription: statsRes.data.teamDescription || '',
+          memberCount: statsRes.data.memberCount || 1,
+          total: statsRes.data.total ?? 0,
+          completed: statsRes.data.completed ?? 0,
+          pending: statsRes.data.pending ?? 0,
+          inProgress: statsRes.data.inProgress ?? 0
+        });
+      }
+
+      if (tasksRes && Array.isArray(tasksRes.data)) {
+        setTeamTasks(tasksRes.data);
+      } else {
+        setTeamTasks([]);
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError(err.response?.data?.message || 'Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -72,6 +88,16 @@ const Dashboard = () => {
       default:
         return <span className="badge badge-pending"><AlertCircle size={13} /> To Do</span>;
     }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'No due date';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   return (
@@ -164,7 +190,7 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      {/* Task List Table View: Task Name | Assigned To | Status */}
+      {/* Task List Table View: Task Name | Assigned To | Due Date | Priority | Status | Quick Action */}
       {loading ? (
         <div className="loading-container">
           <div className="spinner"></div>
@@ -189,6 +215,7 @@ const Dashboard = () => {
               <tr>
                 <th>Task Name</th>
                 <th>Assigned To</th>
+                <th>Due Date</th>
                 <th>Priority</th>
                 <th>Status</th>
                 <th>Quick Action</th>
@@ -207,6 +234,12 @@ const Dashboard = () => {
                     <div className="assignee-badge">
                       <User size={14} />
                       <span>{task.assignedTo?.name || 'Unassigned'}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: task.dueDate ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
+                      <Calendar size={13} />
+                      <span>{formatDate(task.dueDate)}</span>
                     </div>
                   </td>
                   <td>

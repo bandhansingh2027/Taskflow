@@ -40,6 +40,10 @@ const taskSchema = new mongoose.Schema(
         message: '{VALUE} is not a valid priority'
       },
       default: 'Medium'
+    },
+    dueDate: {
+      type: Date,
+      default: null
     }
   },
   {

@@ -19,46 +19,45 @@ const getTasks = async (req, res) => {
     const { status, priority, search } = req.query;
     const teamId = await getUserTeamId(req.user._id);
 
-    let query = {};
+    let baseQuery = {};
     if (teamId) {
-      query.teamId = teamId;
+      baseQuery = { teamId };
     } else {
-      query.$or = [
-        { userId: req.user._id },
-        { assignedTo: req.user._id }
-      ];
+      baseQuery = {
+        $or: [
+          { userId: req.user._id },
+          { assignedTo: req.user._id }
+        ]
+      };
     }
+
+    const conditions = [baseQuery];
 
     // Status filter
     if (status && status !== 'All') {
       if (status === 'Pending' || status === 'To Do') {
-        query.status = { $in: ['To Do', 'Pending'] };
+        conditions.push({ status: { $in: ['To Do', 'Pending'] } });
       } else {
-        query.status = status;
+        conditions.push({ status });
       }
     }
 
     // Priority filter
     if (priority && priority !== 'All') {
-      query.priority = priority;
+      conditions.push({ priority });
     }
 
     // Search filter (searches title and description)
-    if (search) {
-      const searchRegex = { $regex: search, $options: 'i' };
-      if (query.$or) {
-        query = {
-          $and: [
-            query,
-            { $or: [{ title: searchRegex }, { description: searchRegex }] }
-          ]
-        };
-      } else {
-        query.$or = [{ title: searchRegex }, { description: searchRegex }];
-      }
+    if (search && search.trim()) {
+      const searchRegex = { $regex: search.trim(), $options: 'i' };
+      conditions.push({
+        $or: [{ title: searchRegex }, { description: searchRegex }]
+      });
     }
 
-    const tasks = await Task.find(query)
+    const finalQuery = conditions.length === 1 ? conditions[0] : { $and: conditions };
+
+    const tasks = await Task.find(finalQuery)
       .populate('assignedTo', 'name email')
       .populate('userId', 'name email')
       .sort({ createdAt: -1 });
@@ -81,7 +80,7 @@ const getTasks = async (req, res) => {
 // @access  Private
 const createTask = async (req, res) => {
   try {
-    const { title, description, status, priority, assignedTo } = req.body;
+    const { title, description, status, priority, assignedTo, dueDate } = req.body;
 
     // Validation
     if (!title || title.trim() === '') {
@@ -116,7 +115,8 @@ const createTask = async (req, res) => {
       title: title.trim(),
       description: description ? description.trim() : '',
       status: finalStatus,
-      priority: priority || 'Medium'
+      priority: priority || 'Medium',
+      dueDate: dueDate ? new Date(dueDate) : null
     });
 
     const populatedTask = await Task.findById(task._id)
@@ -141,7 +141,7 @@ const updateTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    const { title, description, status, priority, assignedTo } = req.body;
+    const { title, description, status, priority, assignedTo, dueDate } = req.body;
 
     if (title !== undefined && title.trim() === '') {
       return res.status(400).json({ message: 'Task title cannot be empty' });
@@ -163,6 +163,9 @@ const updateTask = async (req, res) => {
     if (priority) task.priority = priority;
     if (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo)) {
       task.assignedTo = assignedTo;
+    }
+    if (dueDate !== undefined) {
+      task.dueDate = dueDate ? new Date(dueDate) : null;
     }
 
     await task.save();
@@ -206,25 +209,28 @@ const getTaskStats = async (req, res) => {
       $or: [{ creatorId: req.user._id }, { members: req.user._id }]
     }).populate('members', 'name email');
 
-    let query = {};
+    let baseQuery = {};
     if (team) {
-      query.teamId = team._id;
+      baseQuery = { teamId: team._id };
     } else {
-      query.$or = [{ userId: req.user._id }, { assignedTo: req.user._id }];
+      baseQuery = { $or: [{ userId: req.user._id }, { assignedTo: req.user._id }] };
     }
 
-    const totalTasks = await Task.countDocuments(query);
-    const completedTasks = await Task.countDocuments({ ...query, status: 'Completed' });
-    const pendingTasks = await Task.countDocuments({
-      ...query,
-      status: { $in: ['To Do', 'Pending'] }
+    const totalTasks = await Task.countDocuments(baseQuery);
+    const completedTasks = await Task.countDocuments({
+      $and: [baseQuery, { status: 'Completed' }]
     });
-    const inProgressTasks = await Task.countDocuments({ ...query, status: 'In Progress' });
+    const pendingTasks = await Task.countDocuments({
+      $and: [baseQuery, { status: { $in: ['To Do', 'Pending'] } }]
+    });
+    const inProgressTasks = await Task.countDocuments({
+      $and: [baseQuery, { status: 'In Progress' }]
+    });
 
     res.status(200).json({
       teamName: team ? team.name : 'Personal Workspace',
       teamDescription: team ? team.description : '',
-      memberCount: team ? team.members.length : 1,
+      memberCount: team && team.members ? team.members.filter(Boolean).length : 1,
       total: totalTasks,
       completed: completedTasks,
       pending: pendingTasks,

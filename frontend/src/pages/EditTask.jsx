@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import API from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
-import { Save, ArrowLeft, AlertCircle, FileText, Tag, Flag, User } from 'lucide-react';
+import { Save, ArrowLeft, AlertCircle, FileText, Tag, Flag, User, Calendar } from 'lucide-react';
 
 const EditTask = () => {
   const { id } = useParams();
@@ -14,6 +14,7 @@ const EditTask = () => {
   const [status, setStatus] = useState('To Do');
   const [priority, setPriority] = useState('Medium');
   const [assignedTo, setAssignedTo] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +43,13 @@ const EditTask = () => {
         setStatus(foundTask.status === 'Pending' ? 'To Do' : (foundTask.status || 'To Do'));
         setPriority(foundTask.priority || 'Medium');
         setAssignedTo(foundTask.assignedTo?._id || foundTask.assignedTo || '');
+
+        if (foundTask.dueDate) {
+          const d = new Date(foundTask.dueDate);
+          setDueDate(d.toISOString().split('T')[0]);
+        } else {
+          setDueDate('');
+        }
 
         if (teamRes.data && teamRes.data.members) {
           setMembers(teamRes.data.members);
@@ -76,7 +84,8 @@ const EditTask = () => {
         description: description.trim(),
         status,
         priority,
-        assignedTo
+        assignedTo,
+        dueDate: dueDate || null
       });
 
       navigate('/tasks');
@@ -168,7 +177,7 @@ const EditTask = () => {
             </div>
           </div>
 
-          {/* Status & Priority Row */}
+          {/* Status, Priority & Due Date Row */}
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="status">Task Status</label>
@@ -199,6 +208,19 @@ const EditTask = () => {
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="dueDate">Due Date</label>
+              <div className="input-with-icon">
+                <Calendar size={18} className="input-icon" />
+                <input
+                  type="date"
+                  id="dueDate"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
               </div>
             </div>
           </div>

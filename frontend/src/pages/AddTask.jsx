@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
-import { PlusCircle, ArrowLeft, AlertCircle, FileText, Tag, Flag, User } from 'lucide-react';
+import { PlusCircle, ArrowLeft, AlertCircle, FileText, Tag, Flag, User, Calendar } from 'lucide-react';
 
 const AddTask = () => {
   const { user } = useContext(AuthContext);
@@ -13,6 +13,7 @@ const AddTask = () => {
   const [status, setStatus] = useState('To Do');
   const [priority, setPriority] = useState('Medium');
   const [assignedTo, setAssignedTo] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   const [members, setMembers] = useState([]);
   const [error, setError] = useState('');
@@ -59,7 +60,8 @@ const AddTask = () => {
         description: description.trim(),
         status,
         priority,
-        assignedTo: assignedTo || user?._id
+        assignedTo: assignedTo || user?._id,
+        dueDate: dueDate || null
       });
 
       navigate('/tasks');
@@ -142,7 +144,7 @@ const AddTask = () => {
             </div>
           </div>
 
-          {/* Status & Priority Row */}
+          {/* Status, Priority & Due Date Row */}
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="status">Initial Status</label>
@@ -173,6 +175,19 @@ const AddTask = () => {
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="dueDate">Due Date</label>
+              <div className="input-with-icon">
+                <Calendar size={18} className="input-icon" />
+                <input
+                  type="date"
+                  id="dueDate"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
               </div>
             </div>
           </div>

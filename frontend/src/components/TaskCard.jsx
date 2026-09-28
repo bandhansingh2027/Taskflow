@@ -82,7 +82,7 @@ const TaskCard = ({ task, onDelete, onStatusChange }) => {
       <div className="task-card-footer">
         <div className="task-date">
           <Calendar size={14} />
-          <span>{formatDate(task.createdAt)}</span>
+          <span>{task.dueDate ? `Due: ${formatDate(task.dueDate)}` : formatDate(task.createdAt)}</span>
         </div>
 
         <div className="status-selector">
