@@ -1,20 +1,18 @@
 const path = require('path');
-const express = require('express');
-const cors = require('cors');
 const dotenv = require('dotenv');
 
-// Load environment variables explicitly from backend/.env
+// Load environment variables explicitly from backend/.env at the very top
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-const connectDB = require('./config/db');
+const express = require('express');
+const cors = require('cors');
 
-// Safe debug log for MONGODB_URI presence
-const hasMongoUri = Boolean(
-  (process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGODB_URL || '').trim()
-);
+// Safe debug log for MONGODB_URI presence (does not print credentials)
+const hasMongoUri = Boolean((process.env.MONGODB_URI || '').trim());
 console.log(`MONGODB_URI loaded: ${hasMongoUri}`);
 
-// Connect to MongoDB
+// Import and execute connectDB
+const connectDB = require('./config/db');
 connectDB();
 
 const app = express();
@@ -28,7 +26,6 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/teams', require('./routes/teamRoutes'));
-
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -58,4 +55,3 @@ if (require.main === module) {
 }
 
 module.exports = app;
-
